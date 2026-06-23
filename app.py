@@ -6,7 +6,7 @@ import streamlit as st
 
 from pakwallet.components.ui import inject_global_css
 from pakwallet.config import settings
-from pakwallet.pages.analytics_page import render_analytics
+from pakwallet.pages.analytics import render_analytics
 from pakwallet.pages.assistant import render_assistant
 from pakwallet.pages.bills import render_bills
 from pakwallet.pages.calculators import render_calculators
