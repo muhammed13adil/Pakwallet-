@@ -4,7 +4,9 @@ import streamlit as st
 from pakwallet.utils.formatting import format_pkr
 from pakwallet.utils.calculators import (
     calculate_sip, 
+    calculate_lump_sum,
     calculate_loan_emi, 
+    calculate_loan_affordability,
     calculate_education_cost, 
     calculate_zakat, 
     calculate_freelance_tax
@@ -16,28 +18,35 @@ def render_calculators() -> None:
     st.write("Plan and simulate your future financial decisions.")
     
     tabs = st.tabs([
-        "📊 Mutual Fund SIP", 
-        "🏠 Home Loan EMI", 
+        "📊 Mutual Fund Investment", 
+        "🏠 Home Loan Planning", 
         "🚗 Car Financing", 
         "🎓 Child Education", 
         "🕌 Zakat Calculator", 
         "💼 Freelancer Tax"
     ])
     
-    # --- Tab 1: SIP ---
+    # --- Tab 1: SIP & Lump Sum ---
     with tabs[0]:
-        st.subheader("Systematic Investment Plan (SIP) Calculator")
-        st.write("Estimate the growth of your mutual fund investments over time.")
+        st.subheader("Mutual Fund Investment Calculator")
+        st.write("Estimate the growth of your mutual fund investments using SIP or Lump Sum options.")
+        
+        calc_type = st.radio("Investment Mode", ["SIP (Monthly)", "Lump Sum (One-Time)"], horizontal=True)
         
         col1, col2 = st.columns(2)
         with col1:
-            sip_amount = st.number_input("Monthly Investment Amount (PKR)", min_value=500, value=5000, step=500, key="sip_amt")
-            sip_return = st.slider("Expected Annual Return Rate (%)", min_value=1.0, max_value=30.0, value=12.0, step=0.5, key="sip_ret")
-            sip_years = st.slider("Time Period (Years)", min_value=1, max_value=40, value=10, step=1, key="sip_yrs")
+            if calc_type == "SIP (Monthly)":
+                sip_amount = st.number_input("Monthly Investment Amount (PKR)", min_value=500, value=5000, step=500, key="sip_amt")
+                sip_return = st.slider("Expected Annual Return Rate (%)", min_value=1.0, max_value=30.0, value=12.0, step=0.5, key="sip_ret")
+                sip_years = st.slider("Time Period (Years)", min_value=1, max_value=40, value=10, step=1, key="sip_yrs")
+                res = calculate_sip(sip_amount, sip_return, sip_years)
+            else:
+                lump_amount = st.number_input("One-Time Investment Amount (PKR)", min_value=5000, value=50000, step=5000, key="lump_amt")
+                lump_return = st.slider("Expected Annual Return Rate (%)", min_value=1.0, max_value=30.0, value=12.0, step=0.5, key="lump_ret")
+                lump_years = st.slider("Time Period (Years)", min_value=1, max_value=40, value=10, step=1, key="lump_yrs")
+                res = calculate_lump_sum(lump_amount, lump_return, lump_years)
             
         with col2:
-            res = calculate_sip(sip_amount, sip_return, sip_years)
-            
             st.markdown(
                 f"""
                 <div class="metric-card">
@@ -57,42 +66,65 @@ def render_calculators() -> None:
                 unsafe_allow_html=True
             )
             
-    # --- Tab 2: Home Loan ---
+    # --- Tab 2: Home Loan EMI & Affordability ---
     with tabs[1]:
-        st.subheader("Home Loan EMI Calculator")
-        st.write("Calculate your monthly mortgage payments and total interest payable.")
+        st.subheader("Home Loan EMI & Affordability Calculator")
+        st.write("Calculate your monthly mortgage payments or estimate your maximum loan eligibility.")
+        
+        mode = st.radio("Calculation Type", ["Calculate Monthly EMI", "Check Loan Affordability"], horizontal=True)
         
         col1, col2 = st.columns(2)
         with col1:
-            home_amount = st.number_input("Loan Amount (PKR)", min_value=100000, value=3000000, step=100000, key="home_amt")
-            home_interest = st.slider("Annual Interest Rate / KIBOR + Spread (%)", min_value=1.0, max_value=35.0, value=15.0, step=0.5, key="home_int")
-            home_years = st.slider("Tenure (Years)", min_value=1, max_value=30, value=15, step=1, key="home_yrs")
+            if mode == "Calculate Monthly EMI":
+                home_amount = st.number_input("Loan Amount (PKR)", min_value=100000, value=3000000, step=100000, key="home_amt")
+                home_interest = st.slider("Annual Interest Rate / KIBOR + Spread (%)", min_value=1.0, max_value=35.0, value=15.0, step=0.5, key="home_int")
+                home_years = st.slider("Tenure (Years)", min_value=1, max_value=30, value=15, step=1, key="home_yrs")
+                res = calculate_loan_emi(home_amount, home_interest, home_years)
+            else:
+                monthly_inc = st.number_input("Your Net Monthly Income (PKR)", min_value=20000, value=150000, step=5000, key="aff_inc")
+                home_interest = st.slider("Annual Interest Rate (%)", min_value=1.0, max_value=35.0, value=15.0, step=0.5, key="aff_int")
+                home_years = st.slider("Tenure (Years)", min_value=1, max_value=30, value=15, step=1, key="aff_yrs")
+                res = calculate_loan_affordability(monthly_inc, home_interest, home_years)
             
         with col2:
-            res = calculate_loan_emi(home_amount, home_interest, home_years)
-            
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div style="font-size: 0.9rem; opacity: 0.7; text-transform: uppercase;">Monthly EMI</div>
-                    <div style="font-size: 1.8rem; font-weight: 800; color: #ffffff; margin: 0.5rem 0;">{format_pkr(res["emi"])}</div>
-                    <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
-                        <span>Principal Amount:</span>
-                        <span style="font-weight: bold;">{format_pkr(home_amount)}</span>
+            if mode == "Calculate Monthly EMI":
+                st.markdown(
+                    f"""
+                    <div class="metric-card">
+                        <div style="font-size: 0.9rem; opacity: 0.7; text-transform: uppercase;">Monthly EMI</div>
+                        <div style="font-size: 1.8rem; font-weight: 800; color: #ffffff; margin: 0.5rem 0;">{format_pkr(res["emi"])}</div>
+                        <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
+                            <span>Principal Amount:</span>
+                            <span style="font-weight: bold;">{format_pkr(home_amount)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
+                            <span>Total Interest Payable:</span>
+                            <span style="font-weight: bold; color: #e74c3c;">{format_pkr(res["total_interest"])}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                            <span>Total Amount Payable:</span>
+                            <span style="font-weight: bold;">{format_pkr(res["total_payable"])}</span>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
-                        <span>Total Interest Payable:</span>
-                        <span style="font-weight: bold; color: #e74c3c;">{format_pkr(res["total_interest"])}</span>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    f"""
+                    <div class="metric-card">
+                        <div style="font-size: 0.9rem; opacity: 0.7; text-transform: uppercase;">Max Affordable Loan</div>
+                        <div style="font-size: 1.8rem; font-weight: 800; color: #2ecc71; margin: 0.5rem 0;">{format_pkr(res["max_loan"])}</div>
+                        <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                            <span>Recommended Max EMI (40% of income):</span>
+                            <span style="font-weight: bold; color: var(--pak-gold);">{format_pkr(res["max_emi"])}</span>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                        <span>Total Amount Payable:</span>
-                        <span style="font-weight: bold;">{format_pkr(res["total_payable"])}</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+                    """,
+                    unsafe_allow_html=True
+                )
             
     # --- Tab 3: Car Financing ---
     with tabs[2]:
@@ -226,6 +258,10 @@ def render_calculators() -> None:
                     <div style="font-size: 0.9rem; opacity: 0.7; text-transform: uppercase;">Annual Tax Due</div>
                     <div style="font-size: 1.8rem; font-weight: 800; color: #e74c3c; margin: 0.5rem 0;">{format_pkr(res["tax_due"])}</div>
                     <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
+                        <span>Monthly Tax Reserve:</span>
+                        <span style="font-weight: bold; color: #e74c3c;">{format_pkr(res["monthly_tax_reserve"])}</span>
+                    </div>
                     <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.3rem;">
                         <span>Net Take-home Annual Income:</span>
                         <span style="font-weight: bold; color: #2ecc71;">{format_pkr(res["net_income"])}</span>

@@ -79,11 +79,38 @@ def calculate_zakat(gold_value: float, silver_value: float, cash_amount: float, 
         "zakat_due": max(zakat_due, 0.0)
     }
 
+def calculate_lump_sum(investment: float, annual_return_rate: float, years: int) -> dict:
+    """Calculate Lump Sum investment future value."""
+    rate = annual_return_rate / 100
+    future_value = investment * ((1 + rate) ** years)
+    estimated_returns = future_value - investment
+    
+    return {
+        "future_value": future_value,
+        "total_invested": investment,
+        "estimated_returns": estimated_returns
+    }
+
+def calculate_loan_affordability(monthly_income: float, interest_rate: float, years: int) -> dict:
+    """Calculate maximum affordable loan amount based on income (recommended EMI = 40% of income)."""
+    max_emi = monthly_income * 0.40
+    monthly_rate = (interest_rate / 100) / 12
+    months = years * 12
+    
+    if monthly_rate == 0:
+        max_loan = max_emi * months
+    else:
+        max_loan = max_emi * (((1 + monthly_rate) ** months) - 1) / (monthly_rate * ((1 + monthly_rate) ** months))
+        
+    return {
+        "max_emi": max_emi,
+        "max_loan": max_loan
+    }
+
 def calculate_freelance_tax(annual_income: float, is_pseb_registered: bool) -> dict:
     """Calculate Freelancer Tax based on FBR (Pakistan) Tax slabs (2024-25/2026)."""
     tax_due = 0.0
     effective_rate = 0.0
-    taxable_income = annual_income
     
     if is_pseb_registered:
         # Export of IT services registered with PSEB has a concessional tax regime (0.25% of turnover)
@@ -108,9 +135,11 @@ def calculate_freelance_tax(annual_income: float, is_pseb_registered: bool) -> d
         effective_rate = (tax_due / annual_income) * 100 if annual_income > 0 else 0.0
         
     net_income = annual_income - tax_due
+    monthly_tax_reserve = tax_due / 12
     
     return {
         "tax_due": tax_due,
         "net_income": net_income,
-        "effective_rate": effective_rate
+        "effective_rate": effective_rate,
+        "monthly_tax_reserve": monthly_tax_reserve
     }

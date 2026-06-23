@@ -11,8 +11,12 @@ def render_savings(session: Session, user_id: int) -> None:
     st.title("Savings Goals")
     st.write("Track your targets, contribute regularly, and achieve financial security.")
     
-    # Fetch goals
+    # Fetch goals and transactions
     goals = session.query(SavingsGoal).filter(SavingsGoal.user_id == user_id).all()
+    transactions = session.query(Transaction).filter(Transaction.user_id == user_id).all()
+    total_income = sum(t.amount for t in transactions if t.type == "income")
+    total_expense = sum(t.amount for t in transactions if t.type == "expense")
+    monthly_surplus = total_income - total_expense
     
     col1, col2 = st.columns([2, 1])
     
@@ -24,6 +28,15 @@ def render_savings(session: Session, user_id: int) -> None:
             for goal in goals:
                 progress_pct = (goal.current_amount / goal.target_amount) * 100 if goal.target_amount > 0 else 0.0
                 progress_pct = min(progress_pct, 100.0)
+                
+                remaining = goal.target_amount - goal.current_amount
+                if remaining <= 0:
+                    forecast_msg = "Goal achieved! 🎉"
+                elif monthly_surplus > 0:
+                    months_needed = remaining / monthly_surplus
+                    forecast_msg = f"Est. completion: **{months_needed:.1f} months** (based on your net surplus of {format_pkr(monthly_surplus)}/mo)"
+                else:
+                    forecast_msg = "Est. completion: *Unknown (increase your wallet surplus to forecast)*"
                 
                 # Render a card for each goal
                 with st.container():
@@ -37,6 +50,9 @@ def render_savings(session: Session, user_id: int) -> None:
                             <div style="display: flex; justify-content: space-between; font-size: 1rem; margin: 0.5rem 0;">
                                 <span>{format_pkr(goal.current_amount)} saved</span>
                                 <span style="font-weight: bold;">{format_pkr(goal.target_amount)} goal</span>
+                            </div>
+                            <div style="font-size: 0.85rem; opacity: 0.85; margin-bottom: 0.5rem;">
+                                {forecast_msg}
                             </div>
                         </div>
                         """,
