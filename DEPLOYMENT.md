@@ -69,10 +69,12 @@ git push -u origin main
    - **Main file path**: Set to `app.py` (the entry point of your application).
    - **App URL**: You can optionally customize the subdomain for your app URL (e.g., `pakwallet.streamlit.app`).
 
-3. **Configure Environment Secrets** (Critical for PakWallet configuration):
-   Streamlit Cloud utilizes a secrets manager to securely store environment variables. To configure these:
+3. **Configure Environment Secrets and Python Version** (Critical for PakWallet configuration):
+   Streamlit Cloud utilizes advanced settings for python environments and secrets. To configure these:
    - Click **Advanced settings** at the bottom of the deployment form.
-   - In the **Secrets** text area, paste the keys and values exactly as they appear in your `.env.example` file, using TOML formatting:
+   - **Python Version**: Select **3.11** or **3.12** from the Python version dropdown.
+     - ⚠️ **IMPORTANT**: Streamlit Cloud ignores `runtime.txt` and defaults to the newest Python version (e.g., Python 3.14). Since older package versions pinned in `requirements.txt` (like `pillow==10.4.0` or `pandas==2.2.2`) do not have precompiled wheels for new Python versions, they will fail to compile. Selecting **3.11** or **3.12** ensures prebuilt wheels are used.
+   - **Secrets**: In the **Secrets** text area, paste the keys and values exactly as they appear in your `.env.example` file, using TOML formatting:
 
      ```toml
      # PakWallet Environment Secrets
@@ -85,7 +87,7 @@ git push -u origin main
    - Click **Save**.
 
 4. **Deploy**: Click the **Deploy!** button.
-   - Streamlit Cloud will spin up a container, read your `runtime.txt` (to install Python 3.11), install the packages specified in `requirements.txt`, set your secrets, and launch the application.
+   - Streamlit Cloud will spin up a container using the selected Python version, install the packages specified in `requirements.txt`, configure your secrets, and launch the application.
    - The deployment process takes 1–3 minutes. Once complete, you will see your live application.
 
 ---
