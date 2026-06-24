@@ -1,14 +1,13 @@
 """Dashboard page for PakWallet."""
 
 import streamlit as st
-import datetime
 from sqlalchemy.orm import Session
 from pakwallet.services.database import Transaction
 from pakwallet.utils.formatting import format_pkr
 from pakwallet.utils.analytics import generate_income_expense_chart, generate_expense_category_chart
 
 def render_dashboard(session: Session, user_id: int) -> None:
-    """Render the dashboard page, showing metrics, charts, and transaction management."""
+    """Render the dashboard page, showing metrics and charts."""
     
     st.title("Wallet Dashboard")
     st.write("Real-time summary of your personal finances.")
@@ -107,61 +106,4 @@ def render_dashboard(session: Session, user_id: int) -> None:
         st.markdown("<div style='text-align: center; font-weight: bold; margin-bottom: 10px;'>Expense Categories</div>", unsafe_allow_html=True)
         fig_cat = generate_expense_category_chart(transactions)
         st.plotly_chart(fig_cat, use_container_width=True)
-        
-    # Transaction Management
-    st.write("")
-    st.subheader("Transaction Management")
-    
-    t_col1, t_col2 = st.columns([2, 1])
-    
-    with t_col1:
-        st.write("##### Recent Transactions")
-        recent = sorted(transactions, key=lambda t: t.date, reverse=True)[:5]
-        
-        if not recent:
-            st.info("No transactions recorded yet.")
-        else:
-            # Table formatting
-            table_data = []
-            for t in recent:
-                date_str = t.date.strftime("%Y-%m-%d")
-                amt_str = format_pkr(t.amount)
-                type_color = "text-green" if t.type == "income" else "text-red"
-                sign = "+" if t.type == "income" else "-"
-                
-                table_data.append({
-                    "Date": date_str,
-                    "Description": t.description or t.category,
-                    "Category": t.category,
-                    "Type": t.type.capitalize(),
-                    "Amount": f"<span class='{type_color}'>{sign} {amt_str}</span>"
-                })
-                
-            df_table = pd.DataFrame(table_data)
-            st.write(df_table.to_html(escape=False, index=False), unsafe_allow_html=True)
-            
-    with t_col2:
-        st.write("##### Add New Transaction")
-        with st.form("new_transaction_form", clear_on_submit=True):
-            t_type = st.selectbox("Type", ["Expense", "Income"])
-            t_amount = st.number_input("Amount (PKR)", min_value=1.0, step=100.0)
-            
-            categories = ["Salary", "Freelance", "Rent", "Groceries", "Utilities", "Fuel", "Dining Out", "Medical", "Education", "Shopping", "Other"]
-            t_category = st.selectbox("Category", categories)
-            t_desc = st.text_input("Description (optional)")
-            t_date = st.date_input("Date", datetime.date.today())
-            
-            submitted = st.form_submit_button("Add Record", use_container_width=True)
-            if submitted:
-                new_t = Transaction(
-                    user_id=user_id,
-                    type=t_type.lower(),
-                    category=t_category,
-                    amount=t_amount,
-                    date=datetime.datetime.combine(t_date, datetime.time.min),
-                    description=t_desc if t_desc.strip() else t_category
-                )
-                session.add(new_t)
-                session.commit()
-                st.success("Transaction added successfully!")
-                st.rerun()
+
