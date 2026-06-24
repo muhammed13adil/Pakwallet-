@@ -1,14 +1,13 @@
 """Analytics page for PakWallet."""
 
 import streamlit as st
-import pandas as pd
 from sqlalchemy.orm import Session
 from pakwallet.services.database import Transaction
 from pakwallet.utils.formatting import format_pkr
 from pakwallet.utils.analytics import generate_monthly_trend_chart, generate_net_worth_trend
 
 def render_analytics(session: Session, user_id: int) -> None:
-    """Render transaction trends and monthly reporting sheets."""
+    """Render transaction trends."""
     st.title("Financial Analytics")
     st.write("Understand your long-term wealth progression and cash flow trends.")
     
@@ -63,39 +62,4 @@ def render_analytics(session: Session, user_id: int) -> None:
         st.write("##### Net Worth Progression")
         fig_nw = generate_net_worth_trend(transactions)
         st.plotly_chart(fig_nw, use_container_width=True)
-        
-    # Detailed Monthly Reports Table
-    st.write("")
-    st.subheader("Monthly Report Sheets")
-    
-    df_raw = pd.DataFrame([{
-        "Month": t.date.strftime("%B %Y"),
-        "MonthSort": t.date.strftime("%Y-%m"),
-        "Type": t.type,
-        "Amount": t.amount
-    } for t in transactions])
-    
-    # Calculate monthly groups
-    monthly_data = []
-    months = df_raw["MonthSort"].unique()
-    months.sort()
-    
-    for m_sort in months:
-        m_df = df_raw[df_raw["MonthSort"] == m_sort]
-        m_name = m_df["Month"].iloc[0]
-        
-        inc = m_df[m_df["Type"] == "income"]["Amount"].sum()
-        exp = m_df[m_df["Type"] == "expense"]["Amount"].sum()
-        bal = inc - exp
-        rate = (bal / inc * 100) if inc > 0 else 0.0
-        
-        monthly_data.append({
-            "Month": m_name,
-            "Income": format_pkr(inc),
-            "Expenses": format_pkr(exp),
-            "Net Savings": format_pkr(bal),
-            "Savings Rate": f"{rate:.1f}%"
-        })
-        
-    df_report = pd.DataFrame(monthly_data)
-    st.dataframe(df_report, use_container_width=True)
+
