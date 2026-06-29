@@ -6,82 +6,24 @@ from pakwallet.services.database import Transaction
 from pakwallet.utils.formatting import format_pkr
 from pakwallet.utils.analytics import generate_income_expense_chart, generate_expense_category_chart
 
-
-def deposit_amount(session: Session, user_id: int, amount: float, category: str = "Deposit") -> Transaction:
-    """Create an income transaction (a deposit) for the user and persist it.
-
-    Returns the created Transaction. Raises on DB error after rollback.
-    """
-    if amount <= 0:
-        raise ValueError("Deposit amount must be greater than zero.")
-
-    txn = Transaction(
-        user_id=user_id,
-        amount=amount,
-        type="income",
-        category=category,
-        # description="Manual deposit",   # <-- add if your model requires it
-        # date=datetime.utcnow(),         # <-- add if your model requires it
-    )
-    try:
-        session.add(txn)
-        session.commit()
-        session.refresh(txn)
-        return txn
-    except Exception:
-        session.rollback()
-        raise
-
-
-def render_deposit_form(session: Session, user_id: int) -> None:
-    """Render a small deposit widget that adds funds to the wallet."""
-    with st.expander("➕ Deposit Funds", expanded=False):
-        with st.form("deposit_form", clear_on_submit=True):
-            amount = st.number_input(
-                "Amount (PKR)",
-                min_value=0.0,
-                step=1000.0,
-                format="%.2f",
-            )
-            category = st.selectbox(
-                "Source",
-                ["Deposit", "Salary", "Bonus", "Refund", "Other Income"],
-            )
-            submitted = st.form_submit_button("Deposit", use_container_width=True)
-
-            if submitted:
-                if amount <= 0:
-                    st.warning("Please enter an amount greater than zero.")
-                else:
-                    try:
-                        deposit_amount(session, user_id, amount, category)
-                        st.success(f"Deposited {format_pkr(amount)} successfully.")
-                        st.rerun()
-                    except Exception as exc:
-                        st.error(f"Could not record deposit: {exc}")
-
-
 def render_dashboard(session: Session, user_id: int) -> None:
     """Render the dashboard page, showing metrics and charts."""
-
+    
     st.title("Wallet Dashboard")
     st.write("Real-time summary of your personal finances.")
-
-    # Deposit widget (adds income, updates balance on rerun)
-    render_deposit_form(session, user_id)
-
+    
     # Fetch all transactions for this user
     transactions = session.query(Transaction).filter(Transaction.user_id == user_id).all()
-
+    
     # Calculate stats
     total_income = sum(t.amount for t in transactions if t.type == "income")
     total_expense = sum(t.amount for t in transactions if t.type == "expense")
     balance = total_income - total_expense
-
+    
     savings_rate = 0.0
     if total_income > 0:
         savings_rate = ((total_income - total_expense) / total_income) * 100
-
+        
     # Financial Health Score
     health_score = 0
     if savings_rate > 0:
@@ -92,9 +34,9 @@ def render_dashboard(session: Session, user_id: int) -> None:
         health_score += 40
     elif balance > 0:
         health_score += int((balance / 50000) * 40)
-
+        
     health_score = max(min(health_score, 100), 0)
-
+    
     # Define health score text and color
     if health_score >= 80:
         health_status = "Excellent"
@@ -105,10 +47,10 @@ def render_dashboard(session: Session, user_id: int) -> None:
     else:
         health_status = "Needs Attention"
         health_color = "red"
-
+        
     # Stats Layout in columns using our custom CSS metric-card classes
     col1, col2, col3 = st.columns(3)
-
+    
     with col1:
         st.markdown(
             f"""
@@ -120,7 +62,7 @@ def render_dashboard(session: Session, user_id: int) -> None:
             """,
             unsafe_allow_html=True
         )
-
+        
     with col2:
         st.markdown(
             f"""
@@ -132,7 +74,7 @@ def render_dashboard(session: Session, user_id: int) -> None:
             """,
             unsafe_allow_html=True
         )
-
+        
     with col3:
         st.markdown(
             f"""
@@ -148,18 +90,18 @@ def render_dashboard(session: Session, user_id: int) -> None:
             """,
             unsafe_allow_html=True
         )
-
+        
     st.write("")
-
+    
     # Charts Section
     st.subheader("Financial Analytics Visualizer")
     char_col1, char_col2 = st.columns(2)
-
+    
     with char_col1:
         st.markdown("<div style='text-align: center; font-weight: bold; margin-bottom: 10px;'>Income vs Expenses</div>", unsafe_allow_html=True)
         fig_inc_exp = generate_income_expense_chart(transactions)
         st.plotly_chart(fig_inc_exp, use_container_width=True)
-
+        
     with char_col2:
         st.markdown("<div style='text-align: center; font-weight: bold; margin-bottom: 10px;'>Expense Categories</div>", unsafe_allow_html=True)
         fig_cat = generate_expense_category_chart(transactions)
