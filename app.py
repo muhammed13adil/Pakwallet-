@@ -43,7 +43,7 @@ def render_login() -> None:
     st.write("Sign in to access your wallet dashboard.")
     with st.form("login_form"):
         email = st.text_input("Email", value=settings.demo_user_email)
-        password = st.text_input("Password", type="password", value=settings.demo_user_password)
+        password = st.text_input("Password", type="password", value=settings.adil_user_password)
         submitted = st.form_submit_button("Sign In", use_container_width=True)
         if submitted:
             session = SessionLocal()
